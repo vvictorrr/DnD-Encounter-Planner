@@ -293,6 +293,19 @@ def _simulate_encounter(
         # own real AC and saves), so a character with worse defenses takes a
         # bigger slice without the party's total incoming damage changing
         # based on party size.
+        #
+        # A group of N identical monsters doesn't keep dealing full-group
+        # damage for the whole fight - individuals die as the party whittles
+        # the group's HP down, so the group's own output tapers off over the
+        # encounter. For a homogeneous group of N, assuming a roughly steady
+        # kill rate, the population is a step function (N alive for the
+        # first 1/N of the fight, N-1 for the next 1/N, ..., 1 for the
+        # last), which averages out to exactly (N+1)/(2N) of the group's
+        # full-strength output - 1.0 for a solo monster (no attrition to
+        # average over), approaching 0.5 for a large group. This only
+        # applies to damage the party *takes*; how much total damage the
+        # party needs to deal to empty a fixed HP pool doesn't depend on
+        # what order individuals within it die in.
         total_monster_dpr = 0.0
         for g in groups:
             special_uses = monster_uses.get(g["bestiary_id"], {})
@@ -300,7 +313,8 @@ def _simulate_encounter(
                 g["monster"], avg_party_ac, avg_party_save_bonus_by_ability, registry, len(party),
                 special_uses, rounds_guess,
             )
-            total_monster_dpr += g["count"] * prof["total_dpr"]
+            attrition_factor = (g["count"] + 1) / (2 * max(1, g["count"]))  # count<=0 groups contribute 0 anyway
+            total_monster_dpr += g["count"] * prof["total_dpr"] * attrition_factor
 
         vulnerability_weight: dict[str, float] = {}
         for c in party:
@@ -311,7 +325,8 @@ def _simulate_encounter(
                 prof = compute_monster_profile(
                     g["monster"], c["ac"], save_bonuses_for_c, registry, len(party), special_uses, rounds_guess,
                 )
-                weight += g["count"] * sum(
+                attrition_factor = (g["count"] + 1) / (2 * max(1, g["count"]))  # count<=0 groups contribute 0 anyway
+                weight += g["count"] * attrition_factor * sum(
                     comp["amount"] * combined_multiplier(c, comp["type"], comp["magical"]) for comp in prof["components"]
                 )
             vulnerability_weight[c["id"]] = weight

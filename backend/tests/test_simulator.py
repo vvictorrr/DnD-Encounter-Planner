@@ -801,3 +801,70 @@ def test_legendary_resistance_does_not_reduce_at_will_or_ongoing_damage():
     reduction = no_lr["party_dpr_total"] - with_lr["party_dpr_total"]
     assert reduction > 0
     assert reduction < no_lr["party_dpr_total"]  # didn't wipe out the fighter's share too
+
+
+# ---- attrition: a group's damage output tapers as individuals die ----
+
+def test_solo_monster_gets_no_attrition_discount():
+    # A lone monster deals full damage right up until it drops - there's no
+    # "partial group" to taper, so count=1 must equal the raw per-monster rate.
+    bestiary = [_goblin(max_hp=999999)]
+    party = [_fighter(max_hp=999999)]
+    solo = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 1}])])["snapshots"][0]
+    # Recompute the same monster's raw per-instance profile directly for comparison.
+    from app.engine.monster import compute_monster_profile
+    raw = compute_monster_profile(bestiary[0], 16, {}, rounds_assumed=1)
+    assert solo["monster_dpr_total"] == pytest.approx(raw["total_dpr"])
+
+
+def test_larger_group_gets_a_bigger_attrition_discount():
+    # (N+1)/(2N) is a strictly decreasing function of N - a bigger group's
+    # output should be discounted more (relative to naive count * per-unit),
+    # not less, since more individuals means more of the fight is spent
+    # with some already dead.
+    bestiary = [_goblin(max_hp=999999)]
+    party = [_fighter(max_hp=999999)]
+
+    def naive_multiple(n):
+        one = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 1}])])["snapshots"][0]
+        return one["monster_dpr_total"] * n
+
+    two = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 2}])])["snapshots"][0]
+    five = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 5}])])["snapshots"][0]
+    assert two["monster_dpr_total"] < naive_multiple(2)
+    assert five["monster_dpr_total"] < naive_multiple(5)
+    # discount grows with group size: 5's actual/naive ratio should be
+    # smaller than 2's actual/naive ratio
+    ratio_two = two["monster_dpr_total"] / naive_multiple(2)
+    ratio_five = five["monster_dpr_total"] / naive_multiple(5)
+    assert ratio_five < ratio_two
+
+
+def test_attrition_factor_matches_the_closed_form_exactly():
+    bestiary = [_goblin(max_hp=999999)]
+    party = [_fighter(max_hp=999999)]
+    one = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 1}])])["snapshots"][0]
+    raw_per_unit = one["monster_dpr_total"]
+    for n in (2, 3, 5, 10):
+        snap = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": n}])])["snapshots"][0]
+        expected = raw_per_unit * n * (n + 1) / (2 * n)
+        assert snap["monster_dpr_total"] == pytest.approx(expected)
+
+
+def test_attrition_does_not_affect_rounds_to_kill_monsters():
+    # Total damage needed to empty a fixed HP pool doesn't depend on what
+    # order individuals within it die in - only the incoming-damage side
+    # should get the attrition discount, not the party's own killing math.
+    bestiary_solo = [_goblin(max_hp=100, attacks=[])]
+    party = [_fighter()]
+    solo_hp_pool = simulate_day(party, bestiary_solo, [_encounter([{"bestiary_id": "g1", "count": 1}])])["snapshots"][0]
+    bestiary_group = [_goblin(max_hp=20, attacks=[])]  # same total HP pool (5 x 20 = 100), spread across 5
+    group_hp_pool = simulate_day(party, bestiary_group, [_encounter([{"bestiary_id": "g1", "count": 5}])])["snapshots"][0]
+    assert solo_hp_pool["rounds_to_kill_monsters"] == pytest.approx(group_hp_pool["rounds_to_kill_monsters"])
+
+
+def test_zero_count_group_does_not_crash_or_contribute_damage():
+    bestiary = [_goblin()]
+    party = [_fighter()]
+    snap = simulate_day(party, bestiary, [_encounter([{"bestiary_id": "g1", "count": 0}])])["snapshots"][0]
+    assert snap["monster_dpr_total"] == 0
