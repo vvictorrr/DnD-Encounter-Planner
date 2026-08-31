@@ -22,4 +22,8 @@ COPY --from=frontend-build /frontend/dist /app/frontend/dist
 
 ENV FLASK_APP=run.py
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "run:app"]
+# --preload: create_app() (and its db.create_all()) runs once in the master
+# process before forking workers, instead of once per worker - without it,
+# multiple workers can race to CREATE TABLE against the same SQLite file on
+# a fresh boot and one of them crashes with "table already exists."
+CMD ["gunicorn", "--preload", "--bind", "0.0.0.0:8080", "--workers", "2", "run:app"]

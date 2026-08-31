@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from sqlalchemy.exc import OperationalError
 
 from .config import Config
 from .extensions import db
@@ -21,15 +22,16 @@ def create_app(config_object: type = Config) -> Flask:
     app.register_blueprint(api_bp, url_prefix="/api")
 
     with app.app_context():
-        db.create_all()
-
-    @app.get("/api/health")
-    def health():
-        return {"status": "ok"}
-
-    _register_frontend(app)
-
-    return app
+        try:
+            db.create_all()
+        except OperationalError as e:
+            # Multiple processes can race to create the same tables on a
+            # fresh boot (e.g. gunicorn workers without --preload, or an
+            # old and new instance briefly overlapping during a rolling
+            # deploy) - if another process already won that race, the
+            # tables exist either way and there's nothing to do here.
+            if "already exists" not in str(e).lower():
+                raise
 
 
 def _register_frontend(app: Flask) -> None:
