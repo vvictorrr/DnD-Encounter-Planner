@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_data:/app/backend/instance
+    environment:
+      - SECRET_KEY=change-me-in-production
+
+volumes:
+  app_data:

@@ -1,0 +1,28 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec).
+#
+# This is for YOU (the repo owner) to deploy once - not something your
+# friends need to touch. Once deployed, you get a public URL; send that to
+# friends and they just open it in a browser. Nothing to install on their end.
+#
+# How to use:
+#   1. Push this repo to your own GitHub account.
+#   2. On render.com: New -> Blueprint -> connect the repo -> Apply.
+#      Render reads this file and provisions everything automatically.
+#   3. Share the resulting *.onrender.com URL with your friends.
+#
+# Free-tier note: the free plan's disk is not persistent across deploys, and
+# the service sleeps after 15 minutes of inactivity (the first request after
+# that takes ~30-60 seconds to wake back up - normal, not a bug). Fine for
+# friends kicking the tires; upgrade to a paid instance + a persistent disk
+# for anything you want to keep long-term.
+
+services:
+  - type: web
+    name: dnd-encounter-planner
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true

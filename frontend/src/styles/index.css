@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Tells Safari/WebKit this page is intentionally dark, so native form
+     controls (select popups, number spinners, autofill) stop injecting a
+     light OS-level color scheme that fights our own styling. */
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #14171f;
+  color: #e9e4d8;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: "Fraunces", serif;
+}
+.font-mono2 {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Chrome/Safari autofill forcibly repaints inputs with a light background
+   and dark text via this pseudo-class, ignoring normal CSS specificity
+   rules - this is almost certainly the source of "yellow text on a white
+   box" on saved/autofilled fields. A very long transition delay is the
+   standard trick to override the injected color without !important wars. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e9e4d8 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #141821 inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Native <select> dropdown text/background on some WebKit versions ignores
+   inherited color entirely unless explicitly set on the element itself. */
+select,
+select option {
+  background-color: #141821;
+  color: #e9e4d8;
+}
