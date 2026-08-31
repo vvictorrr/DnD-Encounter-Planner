@@ -5,13 +5,10 @@ Subclass matters mechanically here, not just as flavor text:
 * Only a **Battle Master** Fighter gets Superiority Dice.
 * Only an **Eldritch Knight** Fighter or **Arcane Trickster** Rogue gets a
   slice of wizard-style spellcasting grafted onto a martial class.
-* Every subclass with a calibration point in "The Optimists' Guide to D&D 5E
-  Damage by Class" (the community DPR spreadsheet) gets a small flat
-  ``subclass_damage_bonus`` reflecting that subclass's signature damage
-  feature (Frenzy, Divine Fury, Spiked Armor, ...), applied as its own typed
-  damage component in :mod:`app.engine.character`. Subclasses without a
-  spreadsheet calibration point default to 0 - an honest "no data" rather
-  than an invented number.
+* Every other subclass's signature feature (Frenzy, Steel Defender, ...) is
+  modeled directly on the character sheet - as an extra attack, rider dice,
+  a flat damage bonus, or a resource, whichever shape actually matches what
+  the feature does - rather than a separate hidden per-subclass lookup.
 """
 from __future__ import annotations
 
@@ -81,30 +78,17 @@ SUBCLASSES: dict[str, list[str]] = {
                "War Magic", "Bladesinging"],
 }
 
-# Flat average-damage-per-round bonus for a subclass's signature feature,
-# calibrated against the "Avg Subclass" column of the Optimists' Guide
-# spreadsheet where available (Barbarian, Bard, Artificer). Everything else
-# defaults to 0 rather than a guessed number - see the module docstring.
-SUBCLASS_DAMAGE_BONUS: dict[str, dict[str, float]] = {
-    "Barbarian": {
-        "Path of the Berserker": 15,       # Frenzy: roughly an extra attack's worth of damage while raging
-        "Path of the Battlerager": 9,      # Spiked Armor bonus-action retaliation
-        "Path of the Ancestral Guardian": 5,
-        "Path of the Zealot": 5,           # Divine Fury flat necrotic/radiant on first hit/turn
-        "Path of the Storm Herald": 5,     # elemental aura tick
-        "Path of Wild Magic": 2,           # Bolstering Magic, situational
-    },
-    "Bard": {
-        "College of Valor": 2,   # Extra Attack access, mostly a martial-hybrid utility bump
-        "College of Lore": 0,
-    },
-    "Artificer": {
-        "Artillerist": 3,   # Eldritch Cannon supplements the Artificer's own turn
-        "Battle Smith": 4,  # Steel Defender adds an extra attacker to the field
-        "Alchemist": 2,     # Alchemical Savant's bonus to their own damage rolls
-        "Armorer": 1,
-    },
-}
+# Subclass-specific signature features are no longer approximated by a
+# hidden hardcoded number. Every one of them already maps onto a general,
+# player-editable field on the character sheet instead: a genuine extra
+# attack (num_attacks), a companion/rider effect (rider dice), or a plain
+# flat damage bonus the player sets themselves (flat_damage_bonus) -
+# whichever shape actually matches what the feature does. A hidden lookup
+# table duplicating those fields was redundant with them, and for anything
+# gated on an active Rage (Berserker, Zealot, Storm Herald, Battlerager) it
+# was worse than redundant - it applied unconditionally even in fights
+# where Rage was never spent. See Rage's own "ongoing" resource for how a
+# rage-gated bonus should actually be modeled instead.
 
 
 def prof_bonus(level: int) -> int:

@@ -105,18 +105,14 @@ def test_resolve_resource_type_spell_id_overrides_the_resources_own_placeholder_
     assert (dtype, magical) == ("fire", True)
 
 
-def test_subclass_damage_bonus_applies_as_its_own_component():
-    ch = _base_martial(cls="Barbarian", subclass="Path of the Berserker", weapon_damage_type="slashing")
-    profile = compute_character_profile(ch, target_ac=15)
-    bonus_component = next((c for c in profile["components"] if "Berserker" in c["source"]), None)
-    assert bonus_component is not None
-    assert bonus_component["amount"] == 15
-
-
-def test_no_subclass_bonus_when_subclass_has_no_calibration():
-    ch = _base_martial(cls="Barbarian", subclass="Path of the Totem Warrior")
-    profile = compute_character_profile(ch, target_ac=15)
-    assert not any("feature" in c["source"] for c in profile["components"])
+def test_subclass_never_adds_its_own_hidden_damage_component():
+    # Subclass signature features are modeled directly via num_attacks,
+    # rider dice, flat_damage_bonus, or a resource - never a separate
+    # hidden lookup keyed on class/subclass.
+    for subclass in ["Path of the Berserker", "Path of the Totem Warrior", "Path of the Zealot"]:
+        ch = _base_martial(cls="Barbarian", subclass=subclass, weapon_damage_type="slashing")
+        profile = compute_character_profile(ch, target_ac=15)
+        assert not any("feature" in c["source"] for c in profile["components"])
 
 
 def test_known_cantrip_uses_real_spell_math_over_the_generic_fallback():

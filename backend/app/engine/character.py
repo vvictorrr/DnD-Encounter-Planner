@@ -13,7 +13,6 @@ from .classes_data import (
     CASTING_ABILITY,
     FEATS,
     SAVE_PROFICIENCIES,
-    SUBCLASS_DAMAGE_BONUS,
     ability_mod,
     eldritch_blast_beams,
     generic_cantrip_avg,
@@ -68,9 +67,12 @@ def compute_character_profile(
 
     ``components`` is the list of typed damage sources for one turn's
     at-will routine: weapon attacks, rider dice (Sneak Attack, Hunter's
-    Mark, Hex), a cantrip if the character is a caster in cantrip mode, bonus
-    attacks from feats like Polearm Master, and a flat subclass signature-
-    feature bonus where one is calibrated (see ``classes_data.SUBCLASS_DAMAGE_BONUS``).
+    Mark, Hex), a cantrip if the character is a caster in cantrip mode, and
+    bonus attacks from feats like Polearm Master. A subclass's signature
+    feature isn't approximated here at all - it's modeled directly on the
+    character sheet via whichever of these same fields actually matches
+    what the feature does (an extra attack, rider dice, a flat bonus, or an
+    ongoing/burst resource), rather than a separate hidden lookup.
 
     Resource/nova spend (spell slots, Rage charges, Ki, ...) is intentionally
     *not* included here - how much of a resource gets spent is a per-encounter
@@ -104,7 +106,6 @@ def compute_character_profile(
     dmg_mult = FEATS["savage"]["dmg_mult"] if feats.get("savage") else 1.0
 
     components: list[dict] = []
-    subclass_bonus = SUBCLASS_DAMAGE_BONUS.get(ch["cls"], {}).get(ch.get("subclass", ""), 0)
 
     if ch.get("is_caster") and ch.get("use_cantrip"):
         hit_pct = hit_chance(to_hit_mod, target_ac)
@@ -126,9 +127,6 @@ def compute_character_profile(
             amount = beams * expected_attack_damage(to_hit_mod, target_ac, per_beam_avg, flat_dmg) * dmg_mult
             components.append({"source": "cantrip (generic)", "type": ch["weapon_damage_type"],
                                 "magical": True, "amount": amount})
-        if subclass_bonus:
-            components.append({"source": f"{ch.get('subclass', 'subclass')} feature", "type": ch["weapon_damage_type"],
-                                "magical": True, "amount": subclass_bonus})
         return {"components": components, "hit_pct": hit_pct, "to_hit_mod": to_hit_mod}
 
     hit_pct = hit_chance(to_hit_mod, target_ac)
@@ -157,12 +155,6 @@ def compute_character_profile(
         components.append({
             "source": "Crossbow Expert bonus attack", "type": ch["weapon_damage_type"],
             "magical": bool(ch.get("attack_is_magical")), "amount": expected_attack_damage(to_hit_mod, target_ac, d, flat_dmg),
-        })
-
-    if subclass_bonus:
-        components.append({
-            "source": f"{ch.get('subclass', 'subclass')} feature", "type": ch["weapon_damage_type"],
-            "magical": bool(ch.get("attack_is_magical")), "amount": subclass_bonus,
         })
 
     return {"components": components, "hit_pct": hit_pct, "to_hit_mod": to_hit_mod}
