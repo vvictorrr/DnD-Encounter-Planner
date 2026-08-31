@@ -33,6 +33,14 @@ def create_app(config_object: type = Config) -> Flask:
             if "already exists" not in str(e).lower():
                 raise
 
+    @app.get("/api/health")
+    def health():
+        return {"status": "ok"}
+
+    _register_frontend(app)
+
+    return app
+
 
 def _register_frontend(app: Flask) -> None:
     """Serve the built React app (if present) so the whole thing runs as a
