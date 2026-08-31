@@ -22,7 +22,6 @@ export function CharacterCard({ c, referenceData, customSpells, onChange, onRemo
   const [expanded, setExpanded] = useState(true);
   const ref = useMemo(() => referenceDpr(c), [c]);
   const subclassOptions = referenceData.subclasses[c.cls] || [];
-  const subclassBonus = referenceData.subclass_damage_bonus?.[c.cls]?.[c.subclass];
   const allSpells = useMemo(() => {
     const merged = { ...referenceData.spells };
     for (const s of customSpells) merged[s.id] = s;
@@ -122,7 +121,6 @@ export function CharacterCard({ c, referenceData, customSpells, onChange, onRemo
           stats={[
             { label: "Ref. DPR @ AC 15", value: ref.dpr.toFixed(1), accent: true, hint: "At-will attacks only - computed before any resources (spell slots, Rage, Action Surge, etc.) are spent this encounter." },
             { label: "Hit chance", value: `${Math.round(ref.hitPct * 100)}%` },
-            { label: "Subclass bonus", value: subclassBonus ? `+${subclassBonus}` : "n/a" },
           ]}
         />
       </div>
